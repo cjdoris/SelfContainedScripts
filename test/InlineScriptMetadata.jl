@@ -116,3 +116,27 @@ end
         """
     @test_throws ArgumentError parse(ISM.FileWithMetadata, src)
 end
+
+@testitem "add_block_at_top basic insertion and duplicate error" begin
+    const ISM = SelfContainedScripts.InlineScriptMetadata
+
+    base_src = string("println(", '"', "before", '"', ")\n")
+    f0 = parse(ISM.FileWithMetadata, base_src)
+
+    # Insert a project block at the very top
+    f1 = ISM.add_block_at_top(f0, "project", string("name = ", '"', "foo", '"'))
+
+    @test haskey(f1.blocks, "project")
+    @test f1.blocks["project"].content == string("name = ", '"', "foo", '"', "\n")
+
+    # The content should start with the block, then a blank line, then the original content verbatim
+    block_text = f1.content[first(f1.blocks["project"].block_range):last(f1.blocks["project"].block_range)]
+    tail_start = nextind(f1.content, last(f1.blocks["project"].block_range))
+    tail = tail_start <= lastindex(f1.content) ? f1.content[tail_start:end] : ""
+    @test startswith(block_text, "# /// project")
+    @test endswith(block_text, "# ///")
+    @test tail == string("\n", base_src)
+
+    # Trying to insert the same block type again errors
+    @test_throws ArgumentError ISM.add_block_at_top(f1, "project", string("name = ", '"', "bar", '"'))
+end

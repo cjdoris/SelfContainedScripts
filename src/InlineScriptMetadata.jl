@@ -23,7 +23,7 @@ end
 # - (*ANYCRLF) to allow any newline sequence (\n, \r, \r\n)
 # - \R captures the actual newline sequence, instead of \s which only captures one char
 const METADATA_REGEX =
-    r"(*ANYCRLF)(?m)^# /// (?<type>[a-zA-Z0-9-]+)$\R(?<content>(^#(| .*)$\R)+)^# ///$"
+    r"(*ANYCRLF)(?m)^# /// (?<type>[a-zA-Z0-9-]+)$\R(?<content>(^#(| .*)$\R)+)^# ///$\R?"
 
 function Base.parse(::Type{FileWithMetadata}, src::String)
     blocks = Dict{String,MetadataBlock}()
@@ -56,4 +56,60 @@ function Base.read(io::IO, ::Type{FileWithMetadata})
     return parse(FileWithMetadata, s)
 end
 
+function newline_str(code::String)
+    if occursin("\r\n", code)
+        "\r\n"
+    elseif occursin("\n", code)
+        "\n"
+    elseif occursin("\r", code)
+        "\r"
+    else
+        "\n"
+    end
+end
+
+function add_block_at_top(f::FileWithMetadata, t::AbstractString, content::AbstractString)::FileWithMetadata
+    t = String(t)
+    if haskey(f.blocks, t)
+        throw(ArgumentError("Duplicate metadata block of type '$t'"))
+    end
+
+    # Preprocess: ensure exactly one trailing newline in the raw content
+    c = String(content)
+    nl = newline_str(c)
+    if !endswith(c, "\n") && !endswith(c, "\r")
+        c *= nl
+    end
+    # Prefix '# ' at the start of every line using a regex (no manual splitting)
+    commented = replace(c, r"(*ANYCRLF)(?m)^" => "# ")
+
+    # Build via IOBuffer as requested
+    io = IOBuffer()
+    print(io, "# /// ", t, nl)
+    write(io, commented)          # commented includes its trailing newline
+    print(io, "# ///", nl)
+    print(io, nl)                   # blank line after the block to separate from following content
+    write(io, f.content)
+    new_src = String(take!(io))
+
+    # Parse back and validate
+    f2 = parse(FileWithMetadata, new_src)
+
+    if !haskey(f2.blocks, t)
+        error("internal error: inserted block not found after parse")
+    end
+
+    expected_keys = Set(keys(f.blocks))
+    push!(expected_keys, t)
+    if Set(keys(f2.blocks)) != expected_keys
+        error("internal error: parsed blocks after insertion do not match expectation")
+    end
+
+    # After stripping, the content should equal the normalized input (with one trailing newline)
+    if f2.blocks[t].content != c
+        error("internal error: inserted block content mismatch")
+    end
+
+    return f2
+end
 end # module InlineScriptMetadata
