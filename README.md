@@ -133,6 +133,8 @@ If you have an existing Julia project containing a script you want to "upgrade" 
 self-contained you can simply call
 
 ```julia
+using SelfContainedScripts, Pkg
+Pkg.activate("your-project")
 SelfContainedScripts.sync("your-script.jl")
 ```
 
