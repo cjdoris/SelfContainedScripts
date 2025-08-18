@@ -140,3 +140,37 @@ end
     # Trying to insert the same block type again errors
     @test_throws ArgumentError ISM.add_block_at_top(f1, "project", string("name = ", '"', "bar", '"'))
 end
+
+@testitem "replace_block_content success and newline preservation" begin
+    const ISM = SelfContainedScripts.InlineScriptMetadata
+
+    src = """
+        # /// project
+        # name = "a"
+        # ///
+        println("tail")
+        """
+    f = parse(ISM.FileWithMetadata, src)
+
+    # Replacement text uses CRLF and omits trailing newline; implementation should append one CRLF.
+    ptxt = string(
+        "name = ", '"', "b", '"', "\r\n",
+        "[deps]\r\n",
+        "JSON = ", '"', "00000000-0000-0000-0000-000000000000", '"'
+    )
+
+    f2 = ISM.replace_block_content(f, "project", ptxt)
+
+    # Stripped content preserves provided newline style and has exactly one trailing newline added
+    @test haskey(f2.blocks, "project")
+    @test f2.blocks["project"].content == string(ptxt, "\r\n")
+
+    # Non-block code remains unchanged
+    @test endswith(f2.content, "println(\"tail\")\n")
+end
+
+@testitem "replace_block_content errors when block is missing" begin
+    const ISM = SelfContainedScripts.InlineScriptMetadata
+    f = parse(ISM.FileWithMetadata, "println(\"no blocks\")\n")
+    @test_throws ArgumentError ISM.replace_block_content(f, "project", "name = \"x\"")
+end

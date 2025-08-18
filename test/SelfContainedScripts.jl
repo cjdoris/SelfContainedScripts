@@ -43,3 +43,47 @@ end
     write(script, content)
     @test_throws ArgumentError SelfContainedScripts.init(script)
 end
+
+@testitem "sync replaces project block from active Project.toml preserving newline style" begin
+    const ISM = SelfContainedScripts.InlineScriptMetadata
+
+    tmp = mktempdir()
+    script = joinpath(tmp, "s.jl")
+
+    # Create script with a minimal project block but do not activate envs
+    out = SelfContainedScripts.init(script; name="s", activate=false, resolve=false)
+    @test out == abspath(script)
+
+    # Prepare a temp environment with CRLF Project.toml
+    envdir = mktempdir()
+    proj = joinpath(envdir, "Project.toml")
+    ptxt = string(
+        "name = ", '"', "s", '"', "\r\n",
+        "[deps]\r\n",
+        "ExampleDep = ", '"', "01234567-89ab-cdef-0123-456789abcdef", '"'
+    )
+    write(proj, ptxt)
+
+    # Activate that environment so Base.active_project() points to proj
+    Pkg.activate(envdir)
+
+    # Sync script's project block from active Project.toml
+    out2 = SelfContainedScripts.sync(script)
+    @test out2 == abspath(script)
+
+    f = read(script, ISM.FileWithMetadata)
+    @test haskey(f.blocks, "project")
+    @test f.blocks["project"].content == string(ptxt, "\r\n")
+end
+
+@testitem "sync errors when project block is missing" begin
+    tmp = mktempdir()
+    script = joinpath(tmp, "s2.jl")
+    write(script, "println(\"x\")\n")
+
+    envdir = mktempdir()
+    write(joinpath(envdir, "Project.toml"), "name = \"z\"")
+    Pkg.activate(envdir)
+
+    @test_throws ArgumentError SelfContainedScripts.sync(script)
+end

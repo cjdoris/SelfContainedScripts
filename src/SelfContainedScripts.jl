@@ -5,7 +5,7 @@ using .InlineScriptMetadata
 using Pkg
 using TOML
 
-public activate, init
+public activate, init, sync
 
 # Remembered last script file path (empty string means unset)
 global SCRIPT_FILE::String
@@ -135,6 +135,41 @@ function init(script::AbstractString; name::Union{Nothing,AbstractString}=nothin
     end
     
     return script
+end
+
+"""
+    sync(script::Union{Nothing,AbstractString}=nothing) -> String
+
+Overwrite the existing 'project' metadata block in `script` with the content of
+the currently active Project.toml (Base.active_project()).
+
+- The 'project' block must already exist in the script.
+- The inner content preserves the newline style of the active Project.toml.
+- If the active Project.toml lacks a trailing newline, one is appended using its own newline style.
+- Returns the absolute path to the updated script.
+"""
+function sync(script::Union{Nothing,AbstractString}=nothing)::String
+    script = script_file(script)
+
+    # Parse file and ensure a 'project' block exists (the replacement call will error if missing)
+    f = read(script, InlineScriptMetadata.FileWithMetadata)
+
+    # Locate active Project.toml
+    proj = Base.active_project()
+    if proj === nothing || !isfile(proj)
+        error("no active Project.toml found; activate an environment first")
+    end
+
+    # Read active Project.toml content verbatim
+    ptxt::String = read(proj, String)
+
+    # Replace the 'project' block content preserving the provided content's newline style
+    f2 = InlineScriptMetadata.replace_block_content(f, "project", ptxt)
+
+    # Write back to the script
+    write(script, f2.content)
+
+    return abspath(script)
 end
 
 end # module SelfContainedScripts

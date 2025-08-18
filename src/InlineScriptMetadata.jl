@@ -112,4 +112,43 @@ function add_block_at_top(f::FileWithMetadata, t::AbstractString, content::Abstr
 
     return f2
 end
+
+# Replace the content of an existing block identified by its type.
+function replace_block_content(f::FileWithMetadata, t::AbstractString, content::AbstractString)::FileWithMetadata
+    t = String(t)
+    blk = get(f.blocks, t, nothing)
+    if blk === nothing
+        throw(ArgumentError("No metadata block of type '$t' to replace"))
+    end
+
+    # Normalize raw content to include exactly one trailing newline,
+    # using the newline style of the provided content.
+    c = String(content)
+    nl = newline_str(c)
+    if !endswith(c, "\n") && !endswith(c, "\r")
+        c *= nl
+    end
+
+    # Prefix '# ' at the start of every line
+    commented = replace(c, r"(*ANYCRLF)(?m)^" => "# ")
+
+    # Splice into original source replacing only the commented content range
+    src = f.content
+    i = first(blk.content_range)
+    j = last(blk.content_range)
+    head = i > firstindex(src) ? src[firstindex(src):prevind(src, i)] : ""
+    tail = j < lastindex(src) ? src[nextind(src, j):end] : ""
+    new_src = string(head, commented, tail)
+
+    # Re-parse and validate
+    f2 = parse(FileWithMetadata, new_src)
+    if Set(keys(f2.blocks)) != Set(keys(f.blocks))
+        error("internal error: parsed blocks after replacement do not match expectation")
+    end
+    if f2.blocks[t].content != c
+        error("internal error: replaced block content mismatch")
+    end
+    return f2
+end
+
 end # module InlineScriptMetadata
