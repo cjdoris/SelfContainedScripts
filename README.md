@@ -130,19 +130,13 @@ SelfContainedScripts.sync()
 ## Existing scripts
 
 If you have an existing Julia project containing a script you want to "upgrade" to be
-self-contained:
+self-contained you can simply call
 
 ```julia
-using SelfContainedScripts, Pkg
-Pkg.activate("your-project")
-
-# Initialise the script but stay in the current project.
-# You only need to do this once.
-SelfContainedScripts.init("your-script.jl", activate=false)
-
-# Sync the current Project.toml into the script.
 SelfContainedScripts.sync("your-script.jl")
 ```
+
+which will copy the current Project.toml into the given script.
 
 ## API
 We have these functions:

@@ -141,10 +141,10 @@ end
 """
     sync(script::Union{Nothing,AbstractString}=nothing) -> String
 
-Overwrite the existing 'project' metadata block in `script` with the content of
+Overwrite the 'project' metadata block in `script` with the content of
 the currently active Project.toml (Base.active_project()).
 
-- The 'project' block must already exist in the script.
+- If the 'project' block is missing, it is created (and the two bootstrap lines are inserted) exactly as init(script; activate=false) would do.
 - The inner content preserves the newline style of the active Project.toml.
 - If the active Project.toml lacks a trailing newline, one is appended using its own newline style.
 - Returns the absolute path to the updated script.
@@ -152,8 +152,12 @@ the currently active Project.toml (Base.active_project()).
 function sync(script::Union{Nothing,AbstractString}=nothing)::String
     script = script_file(script)
 
-    # Parse file and ensure a 'project' block exists (the replacement call will error if missing)
+    # Parse file; if no 'project' block, initialize it with boilerplate (without activation)
     f = read(script, InlineScriptMetadata.FileWithMetadata)
+    if !haskey(f.blocks, "project")
+        init(script; activate=false)
+        f = read(script, InlineScriptMetadata.FileWithMetadata)
+    end
 
     # Locate active Project.toml
     proj = Base.active_project()
