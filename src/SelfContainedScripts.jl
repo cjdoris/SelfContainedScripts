@@ -123,7 +123,8 @@ function init(script::AbstractString; name::Union{Nothing,AbstractString}=nothin
     head = content[first(blk.block_range):last(blk.block_range)]
     tail_start = nextind(content, last(blk.block_range))
     tail = tail_start <= lastindex(content) ? content[tail_start:end] : ""
-    code = "using SelfContainedScripts\nSelfContainedScripts.activate()\n"
+    nl = InlineScriptMetadata.newline_str(content)
+    code = "using SelfContainedScripts$(nl)SelfContainedScripts.activate()$(nl)"
     final = string(head, code, tail)
 
     # write back
