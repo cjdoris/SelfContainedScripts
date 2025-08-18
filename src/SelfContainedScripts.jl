@@ -7,8 +7,33 @@ using TOML
 
 public activate, init
 
+# Remembered last script file path (empty string means unset)
+global SCRIPT_FILE::String
+
+# Internal helper to resolve and persist the current script file path
+function script_file(script::Union{Nothing,AbstractString}=nothing)::String
+    if script === nothing
+        if @isdefined SCRIPT_FILE
+            return SCRIPT_FILE
+        end
+        sf = Base.PROGRAM_FILE
+        if isempty(sf)
+            error("not running a script (PROGRAM_FILE is empty)")
+        end
+        global SCRIPT_FILE = abspath(sf)
+        return SCRIPT_FILE
+    else
+        s = String(script)
+        if isempty(s)
+            error("script path is empty")
+        end
+        global SCRIPT_FILE = abspath(s)
+        return SCRIPT_FILE
+    end
+end
+
 """
-    activate(script::AbstractString=Base.PROGRAM_FILE; resolve=true) -> String
+    activate(script::Union{Nothing,AbstractString}=nothing; resolve=true) -> String
 
 Activate a self-contained project for `script` defined by an inline `project` metadata block.
 
@@ -16,10 +41,8 @@ The project is at ~/.julia/environments/self-contained-scripts/<name>.
 
 Returns the absolute path to the generated Project.toml after activation (and resolve when enabled).
 """
-function activate(script::AbstractString = Base.PROGRAM_FILE; resolve::Bool = true)::String
-    if isempty(script)
-        error("not running a script (PROGRAM_FILE is empty)")
-    end
+function activate(script::Union{Nothing,AbstractString} = nothing; resolve::Bool = true)::String
+    script = script_file(script)
 
     # parse file
     f = read(script, InlineScriptMetadata.FileWithMetadata)
@@ -57,7 +80,7 @@ function activate(script::AbstractString = Base.PROGRAM_FILE; resolve::Bool = tr
 end
 
 """
-    init(script::AbstractString; name=nothing, activate=true, resolve=true) -> String
+    init(script::Union{Nothing,AbstractString}=nothing; name=nothing, activate=true, resolve=true) -> String
 
 Create or update `script` by inserting at the very top:
 - a minimal 'project' metadata block with only `name` (derived from file name when not provided)
@@ -73,9 +96,7 @@ When activate=false, no environment activation occurs. When resolve=false, it is
 Returns the absolute path to `script`.
 """
 function init(script::AbstractString; name::Union{Nothing,AbstractString}=nothing, activate::Bool=true, resolve::Bool=true)::String
-    if isempty(script)
-        error("script path is empty")
-    end
+    script = script_file(script)
 
     # Prepare initial content
     newfile = !isfile(script)
@@ -110,7 +131,7 @@ function init(script::AbstractString; name::Union{Nothing,AbstractString}=nothin
 
     # activate (optional)
     if activate
-        SelfContainedScripts.activate(script; resolve=resolve)
+        SelfContainedScripts.activate(nothing; resolve=resolve)
     end
     
     return script
