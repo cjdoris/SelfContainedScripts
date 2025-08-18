@@ -10,12 +10,8 @@ in their default global environment:
 julia -e 'using Pkg; Pkg.add(url="https://github.com/cjdoris/SelfContainedScripts.jl.git");'
 ```
 
-Or equivalently:
+Or equivalently using the Julia Pkg REPL:
 ```
-$ julia
-
-julia> # press ] to enter the Pkg REPL
-
 pkg> add https://github.com/cjdoris/SelfContainedScripts.jl.git
 ```
 
