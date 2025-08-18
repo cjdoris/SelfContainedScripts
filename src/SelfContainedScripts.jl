@@ -157,6 +157,7 @@ function sync(script::Union{Nothing,AbstractString}=nothing)::String
     if !haskey(f.blocks, "project")
         init(script; activate=false)
         f = read(script, InlineScriptMetadata.FileWithMetadata)
+        @assert haskey(f.blocks, "project")
     end
 
     # Locate active Project.toml
