@@ -37,9 +37,9 @@ end
 
 Activate a self-contained project for `script` defined by an inline `project` metadata block.
 
-The project is at ~/.julia/environments/self-contained-scripts/<name>.
+The project is at `~/.julia/environments/self-contained-scripts/<name>`.
 
-Returns the absolute path to the generated Project.toml after activation (and resolve when enabled).
+Returns the absolute path to the generated Project.toml.
 """
 function activate(script::Union{Nothing,AbstractString} = nothing; resolve::Bool = true)::String
     script = script_file(script)
@@ -83,15 +83,21 @@ end
     init(script::Union{Nothing,AbstractString}=nothing; name=nothing, activate=true, resolve=true) -> String
 
 Create or update `script` by inserting at the very top:
-- a minimal 'project' metadata block with only `name` (derived from file name when not provided)
+
+- a minimal `project` metadata block with only `name` (derived from file name when not provided)
+
 - the two bootstrap lines:
+
+  ```
   using SelfContainedScripts
   SelfContainedScripts.activate()
+  ```
 
-If `script` does not exist, it is created and a '# your code here' placeholder is appended after the two lines.
-Error if a 'project' block already exists.
+It is then activated (see (`activate`)[@ref]) unless `activate=false`.
 
-When activate=false, no environment activation occurs. When resolve=false, it is passed to activate(), skipping dependency resolution.
+If `script` does not exist, it is created.
+
+Errors if a `project` block already exists.
 
 Returns the absolute path to `script`.
 """
@@ -141,13 +147,13 @@ end
 """
     sync(script::Union{Nothing,AbstractString}=nothing) -> String
 
-Overwrite the 'project' metadata block in `script` with the content of
-the currently active Project.toml (Base.active_project()).
+Overwrite the `project` metadata block in `script` with the content of the currently
+active Project.toml.
 
-- If the 'project' block is missing, it is created (and the two bootstrap lines are inserted) exactly as init(script; activate=false) would do.
-- The inner content preserves the newline style of the active Project.toml.
-- If the active Project.toml lacks a trailing newline, one is appended using its own newline style.
-- Returns the absolute path to the updated script.
+If the `project` block is missing, it is created (and the two bootstrap lines are
+inserted) exactly as [`init(script; activate=false)`](@ref init) would do.
+
+Returns the absolute path to the updated script.
 """
 function sync(script::Union{Nothing,AbstractString}=nothing)::String
     script = script_file(script)
