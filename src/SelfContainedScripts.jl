@@ -1,13 +1,13 @@
 module SelfContainedScripts
 
-include("InlineScriptMetadata.jl")
-using .InlineScriptMetadata
 using Pkg
 using TOML
 
 public activate, init, sync
 
-# Remembered last script file path (empty string means unset)
+include("InlineScriptMetadata.jl")
+
+# Remembered last script file path
 global SCRIPT_FILE::String
 
 # Internal helper to resolve and persist the current script file path
