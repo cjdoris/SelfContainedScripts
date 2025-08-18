@@ -86,7 +86,7 @@ using TestItems
             # Block text begins and ends with the expected markers
             block_txt = case.src[blk.block_range]
             @test startswith(block_txt, "# /// $t")
-            @test endswith(block_txt, "# ///")
+            @test endswith(block_txt, "# ///\n")
         end
 
         if case.test_io
@@ -102,7 +102,7 @@ using TestItems
     end
 end
 
-@testitem "failure cases" begin
+@testitem "parse failure cases" begin
     const ISM = SelfContainedScripts.InlineScriptMetadata
 
     src = """
@@ -134,7 +134,7 @@ end
     tail_start = nextind(f1.content, last(f1.blocks["project"].block_range))
     tail = tail_start <= lastindex(f1.content) ? f1.content[tail_start:end] : ""
     @test startswith(block_text, "# /// project")
-    @test endswith(block_text, "# ///")
+    @test endswith(block_text, "# ///\n")
     @test tail == string("\n", base_src)
 
     # Trying to insert the same block type again errors
