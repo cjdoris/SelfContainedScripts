@@ -10,9 +10,34 @@ in their default global environment:
 julia -e 'using Pkg; Pkg.add(url="https://github.com/cjdoris/SelfContainedScripts.jl.git");'
 ```
 
+## Example script
+
+Here is a working self-contained Julia script, copied from `examples/example.jl`:
+
+```julia
+# /// project
+# name = "example"
+# 
+# [deps]
+# Example = "7876af07-990d-54b4-ab0e-23690620f79a"
+# ///
+
+using SelfContainedScripts
+SelfContainedScripts.activate()
+
+using Example
+@show Example.hello("Alice")
+```
+
+Provided you have installed SelfContainedScripts into your default global environment,
+this can be simply run like this:
+```bash
+julia example.jl
+```
+
 ## Example workflow
 
-Let's reproduce `examples/example.jl`.
+Let's reproduce the above example script.
 
 First, open Julia and run the following:
 ```julia
@@ -80,11 +105,28 @@ julia example.jl
 Finally, you can share this script with others to run themselves. All they need to do
 is install SelfContainedScripts.jl themselves in their global environment.
 
-## If you have an existing script
+If you come back later to update the script and need to change the dependencies, it's
+as simple as this:
+```julia
+using SelfContainedScripts, Pkg
 
-To "upgrade" an existing script in an existing project:
+# Activate the project for the script.
+SelfContainedScripts.activate("example.jl")
+
+# Modify the project as needed.
+Pkg.add(...)
+
+# Sync the updated Project.toml into the script.
+SelfContainedScripts.sync()
+```
+
+## Existing scripts
+
+If you have an existing Julia project containing a script you want to "upgrade" to be
+self-contained:
 
 ```julia
+using SelfContainedScripts, Pkg
 Pkg.activate("your-project")
 
 # Initialise the script but stay in the current project.
@@ -97,8 +139,9 @@ SelfContainedScripts.sync("your-script.jl")
 
 ## API
 We have these functions:
-- `init(script=nothing; activate=true, resolve=true)` creates or updates a script with a
-  project block and activation code. Activates the environment unless activate=fasle.
+- `init(script=nothing; name=nothing, activate=true, resolve=true)` creates or updates a
+  script with a project block and activation code. Activates the environment unless
+  activate=fasle.
 - `activate(script=nothing; resolve=true)` creates or updates a project from the
   embedded project block in the script, activates and resolves it.
 - `sync(script=nothing)` copy the currently active Project.toml into the script.
